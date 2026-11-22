@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OrchidMonitor 4.0 — Control de Invernadero</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>OrchidMonitor 4.0</h1>
+      <span>Gestión Ambiental de Orquídeas (MVC)</span>
+    </div>
+    <div id="sensor-pill" class="pill offline">Sensor desconectado</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-target="sec-tiempo-real">Datos en Tiempo Real</button>
+    <button class="tab" data-target="sec-sensores">Conectar Sensores</button>
+    <button class="tab" data-target="sec-riego">Calendario de Riego</button>
+    <button class="tab" data-target="sec-historial">Registro Histórico</button>
+  </nav>
+
+  <!-- Alertas visuales (RF2 y RF4) -->
+  <div id="alert-container" class="alert-container"></div>
+
+  <main class="container">
+    <!-- RF4 y RF7 (RF8): Datos en Tiempo Real -->
+    <section id="sec-tiempo-real" class="panel active">
+      <div class="grid-2">
+        <div class="card metric-card">
+          <h3>Humedad Relativa</h3>
+          <p class="metric-value" id="val-humedad">-- %</p>
+          <p class="metric-target">Óptimo: ~80% (75% - 85%)</p>
+          <span id="badge-humedad" class="badge neutral">Sin datos</span>
+        </div>
+
+        <div class="card metric-card">
+          <h3>Temperatura</h3>
+          <p class="metric-value" id="val-temperatura">-- °C</p>
+          <p class="metric-target">Óptimo: 18 °C - 24 °C (noche - día)</p>
+          <span id="badge-temperatura" class="badge neutral">Sin datos</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Monitoreo en Vivo</h3>
+          <small id="ultima-actualizacion">Esperando lecturas...</small>
+        </div>
+        <canvas id="chart-realtime" height="90"></canvas>
+      </div>
+    </section>
+
+    <!-- RF3: Conectar Sensores -->
+    <section id="sec-sensores" class="panel">
+      <div class="card">
+        <h2>Conectar Sensores (Wi-Fi / Bluetooth)</h2>
+        <p class="hint">
+          Usa el emulador mientras llegan los sensores físicos. Los datos se envían a Firebase Realtime Database
+          para que la migración al microcontrolador sea directa.
+        </p>
+
+        <div class="form-row">
+          <label for="protocolo">Protocolo de conexión:</label>
+          <select id="protocolo">
+            <option value="Wi-Fi (ESP32 + DHT22)">Wi-Fi (ESP32 + DHT22)</option>
+            <option value="Bluetooth BLE (Sensor Ambiental)">Bluetooth BLE (Sensor Ambiental)</option>
+          </select>
+        </div>
+
+        <ol class="steps">
+          <li>Instala el sensor de humedad y temperatura dentro del invernadero.</li>
+          <li>Enciende el módulo en modo emparejamiento y verifica la red o Bluetooth.</li>
+          <li>Presiona <strong>Conectar Sensor</strong> para iniciar la verificación y transmisión.</li>
+        </ol>
+
+        <div class="btn-group">
+          <button id="btn-conectar" class="btn primary">Conectar Sensor (Simulado)</button>
+          <button id="btn-desconectar" class="btn secondary" disabled>Desconectar</button>
+          <button id="btn-simular-fallo" class="btn danger">Simular Fallo de Conexión</button>
+        </div>
+
+        <!-- Excepción RF3: Guía de solución -->
+        <div id="troubleshooting-box" class="troubleshooting hidden">
+          <h4>Error de conexión detectado — Guía de solución:</h4>
+          <ul>
+            <li>Verifica que el microcontrolador esté alimentado (LED de estado encendido).</li>
+            <li>Si usas <strong>Wi-Fi</strong>, confirma que la red sea 2.4 GHz y las credenciales sean correctas.</li>
+            <li>Si usas <strong>Bluetooth</strong>, acércate a menos de 10 metros y reinicia el emparejamiento.</li>
+            <li>Revisa las reglas de escritura en Realtime Database de Firebase.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Panel de Pruebas de Escenarios (Simulación)</h3>
+        <p class="hint">Con el sensor conectado, fuerza lecturas fuera de rango para probar alertas automáticas.</p>
+        <div class="btn-group">
+          <button id="btn-escenario-optimo" class="btn primary">Modo Óptimo (~80% / 21 °C)</button>
+          <button id="btn-escenario-seco" class="btn warning">Forzar Humedad Baja (55%)</button>
+          <button id="btn-escenario-calor" class="btn warning">Forzar Temperatura Alta (29 °C)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RF1 y RF2: Calendario de Riego -->
+    <section id="sec-riego" class="panel">
+      <div class="card">
+        <h2>Calendario de Riego</h2>
+        <form id="form-riego">
+          <div class="form-row">
+            <label>Días de riego:</label>
+            <div class="days-selector">
+              <label><input type="checkbox" value="Lun" /> Lun</label>
+              <label><input type="checkbox" value="Mar" /> Mar</label>
+              <label><input type="checkbox" value="Mié" /> Mié</label>
+              <label><input type="checkbox" value="Jue" /> Jue</label>
+              <label><input type="checkbox" value="Vie" /> Vie</label>
+              <label><input type="checkbox" value="Sáb" /> Sáb</label>
+              <label><input type="checkbox" value="Dom" /> Dom</label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="hora-riego">Hora de riego:</label>
+            <input type="time" id="hora-riego" required />
+          </div>
+
+          <div class="form-row">
+            <label for="nota-riego">Sector / Nota:</label>
+            <input type="text" id="nota-riego" placeholder="Ej. Invernadero Norte - Phalaenopsis" required />
+          </div>
+
+          <div class="btn-group">
+            <button type="submit" class="btn primary">Guardar Calendario</button>
+            <button type="button" id="btn-permiso-notif" class="btn secondary">Activar Notificaciones del Navegador</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Riegos Programados</h3>
+        <ul id="lista-riegos" class="schedule-list">
+          <li class="empty">No hay riegos configurados aún.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- RF5 (RF6): Registro Histórico -->
+    <section id="sec-historial" class="panel">
+      <div class="card">
+        <div class="card-header">
+          <h2>Registro Histórico de Condiciones</h2>
+          <div class="freq-box">
+            <label for="frecuencia-select">Frecuencia de registro:</label>
+            <select id="frecuencia-select">
+              <option value="10">Cada 10 segundos (Modo Demo)</option>
+              <option value="60">Cada 1 minuto</option>
+              <option value="1800">Cada 30 minutos</option>
+              <option value="3600" selected>Cada 1 hora (Estándar)</option>
+            </select>
+            <button id="btn-guardar-frecuencia" class="btn primary">Aplicar</button>
+          </div>
+        </div>
+        <canvas id="chart-history" height="90"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>Últimos Registros Almacenados en Firebase</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha y Hora</th>
+                <th>Humedad (%)</th>
+                <th>Temperatura (°C)</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial">
+              <tr><td colspan="4">Sin registros históricos todavía.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
